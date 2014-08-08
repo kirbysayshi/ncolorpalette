@@ -1,0 +1,7 @@
+canvas {
+  background-color: #CCCCCC;
+}
+
+.drag-valid {
+  background-color: green;
+}

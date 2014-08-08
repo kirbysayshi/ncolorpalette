@@ -1,0 +1,32 @@
+{
+  "name": "ncolorpalette",
+  "version": "0.1.0",
+  "description": "Static page for creating n-color palettized images/gifs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "beefy index.js:bundle.js",
+    "deploy": "browserify > bundle.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/kirbysayshi/ncolorpalette.git"
+  },
+  "keywords": [
+    "gif",
+    "k-means",
+    "kmeans",
+    "cluster",
+    "gameboy",
+    "palette"
+  ],
+  "author": "Drew Petersen <kirbysayshi@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kirbysayshi/ncolorpalette/issues"
+  },
+  "homepage": "https://github.com/kirbysayshi/ncolorpalette",
+  "devDependencies": {
+    "browserify": "^5.9.1"
+  }
+}
