@@ -2,6 +2,10 @@ canvas {
   background-color: #CCCCCC;
 }
 
+.input {
+  display: none;
+}
+
 .drag-valid {
   background-color: green;
 }
