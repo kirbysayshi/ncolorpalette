@@ -2,7 +2,6 @@ var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
 
-var imgInput = document.getElementById('img-input');
 var cvsOutputRgb = document.getElementById('cvs-n-color-rgb');
 var ctxOutputRgb = cvsOutputRgb.getContext('2d');
 
@@ -33,6 +32,7 @@ document.addEventListener('drop', function(e) {
   var reader = new FileReader();
   reader.readAsDataURL(files[0]);
   reader.addEventListener('loadend', function() {
+    var imgInput = document.createElement('img');
     imgInput.src = reader.result;
     imgInput.addEventListener('load', function load(e) {
       imgInput.removeEventListener('load', load);
