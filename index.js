@@ -48,16 +48,27 @@ document.addEventListener('drop', function(e) {
       var clusterData = Clusterer.init(imgData.data, clusterCount, 4);
 
       var async = false;
-      converge(clusterData, async, function progress() {},
-        function(err, clusterData, convergeCount) {
-          console.log('converged in', convergeCount);
-        })
+      var ASYNC_AREA_LIMIT = 120000;
 
-      // Make a blank destination image data.
+      if (imgData.width * imgData.height > ASYNC_AREA_LIMIT) {
+        async = true;
+      }
+
+      var convergeStart = window.performance.now();
       var palette = palettes.gameboy.slice(0);
       var outputImageData = ctxOutputRgb.createImageData(imgData);
-      Clusterer.applyPaletteToImageData(clusterData, palette, outputImageData);
-      ctxOutputRgb.putImageData(outputImageData, 0, 0);
+
+      converge(clusterData, async,
+        function progress(clusterData, convergeCount, pixelsMoved) {
+          console.log('converge', convergeCount, async == true ? 'ASYNC' : 'SYNC', pixelsMoved);
+          Clusterer.applyPaletteToImageData(clusterData, palette, outputImageData);
+          ctxOutputRgb.putImageData(outputImageData, 0, 0);
+        },
+        function(err, clusterData, convergeCount) {
+          console.log('converged in', convergeCount, (window.performance.now() - convergeStart) + 'ms');
+          Clusterer.applyPaletteToImageData(clusterData, palette, outputImageData);
+          ctxOutputRgb.putImageData(outputImageData, 0, 0);
+        })
     })
   })
 
