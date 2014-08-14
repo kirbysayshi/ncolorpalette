@@ -2,17 +2,21 @@ var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
 
-var cvsOutputRgb = document.getElementById('cvs-n-color-rgb');
-
 function current() {
 
   var q = document.querySelector.bind(document);
 
   return {
+
+    // Defaults/Constants
+    ASYNC_AREA_LIMIT: 120000,
+
+    // DOM Options
     palette: palettes[q('[name=options-palettes]:checked').value],
     image: q('#img-input'),
     dstCvs: q('#cvs-n-color-rgb'),
-    async: q('#options-async').checked
+    async: q('#options-async').checked,
+    dstImg: q('#img-output')
   }
 }
 
@@ -31,6 +35,7 @@ document.addEventListener('dragleave', function(e) {
 }, false);
 
 document.addEventListener('drop', function(e) {
+  e.preventDefault();
   console.log('drop', e);
   document.body.classList.remove('drag-valid');
 
@@ -49,11 +54,10 @@ document.addEventListener('drop', function(e) {
     c.image.addEventListener('load', function load(e) {
       c.image.removeEventListener('load', load);
       console.log('input display ready');
-      redraw(c.image, c.dstCvs, c.palette);
+      redraw(c);
     })
   })
 
-  e.preventDefault();
   e.stopPropagation();
 }, false)
 
@@ -63,11 +67,25 @@ document.addEventListener('change', function(e) {
 
   if (!c.image.src) return;
 
-  redraw(c.image, c.dstCvs, c.palette);
+  redraw(c);
 })
 
-function redraw(srcImg, dstCvs, palette, opt_cb) {
+function redraw(opts, opt_cb) {
+
+  var srcImg = opts.image;
+  var dstCvs = opts.dstCvs;
+  var palette = opts.palette;
   var dstCtx = dstCvs.getContext('2d');
+  var dstImg = opts.dstImg;
+
+  var srcArea = srcImg.width * srcImg.height;
+  var async = srcArea > opts.ASYNC_AREA_LIMIT && opts.async === true
+    ? true
+    : false;
+
+  // Make canvas visible to allow for animation.
+  dstCvs.style.display = 'block';
+  dstImg.style.display = 'none';
 
   // apply image to canvas
   dstCvs.width = srcImg.width;
@@ -83,13 +101,6 @@ function redraw(srcImg, dstCvs, palette, opt_cb) {
   // Init output data.
   var outputImageData = dstCtx.createImageData(srcData);
 
-  var ASYNC_AREA_LIMIT = 120000;
-
-  var srcArea = srcData.width * srcData.height;
-  var async = srcArea > ASYNC_AREA_LIMIT
-    ? true
-    : false;
-
   var convergeStart = window.performance.now();
   converge(clusterData, async, progress, complete);
 
@@ -103,6 +114,12 @@ function redraw(srcImg, dstCvs, palette, opt_cb) {
     console.log('converged in', convergeCount, (window.performance.now() - convergeStart) + 'ms');
     Clusterer.applyPaletteToImageData(clusterData, palette, outputImageData);
     dstCtx.putImageData(outputImageData, 0, 0);
+    dstImg.src = dstCvs.toDataURL();
+
+    // Hide canvas, show image to allow for dragging out of the browser.
+    dstCvs.style.display = 'none';
+    dstImg.style.display = 'block';
+
     if (opt_cb) opt_cb.apply(null, arguments);
   }
 }
