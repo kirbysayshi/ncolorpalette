@@ -119,7 +119,13 @@ function redraw(opts, opt_cb) {
   }
 
   function complete(err, clusterData, convergeCount) {
-    console.log('converged in', convergeCount, (window.performance.now() - convergeStart) + 'ms');
+
+    var time = window.performance.now() - convergeStart;
+
+    document.querySelector('#output-stats').textContent =
+      '(' + convergeCount + ' iterations, ' + time.toFixed(2) + 'ms)';
+
+    console.log('converged in', convergeCount, time + 'ms');
     Clusterer.applyPaletteToImageData(clusterData, palette, outputImageData);
     dstCtx.putImageData(outputImageData, 0, 0);
     dstImg.src = dstCvs.toDataURL();
