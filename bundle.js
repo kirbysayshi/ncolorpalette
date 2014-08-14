@@ -132,10 +132,12 @@ function redraw(opts, opt_cb) {
     dstImg.src = dstCvs.toDataURL();
 
     // Hide canvas, show image to allow for dragging out of the browser.
-    dstCvs.style.display = 'none';
-    dstImg.style.display = 'block';
+    setTimeout(function() {
+      dstCvs.style.display = 'none';
+      dstImg.style.display = 'block';
 
-    if (opt_cb) opt_cb.apply(null, arguments);
+      if (opt_cb) opt_cb.apply(null, arguments);
+    })
   }
 }
 },{"./lib/clusterer":3,"./lib/converge":4,"./lib/palettes":5}],2:[function(require,module,exports){
