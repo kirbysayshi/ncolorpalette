@@ -2,6 +2,8 @@ var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
 
+var currentConvergence = null;
+
 function current() {
 
   var q = document.querySelector.bind(document);
@@ -72,6 +74,12 @@ document.addEventListener('change', function(e) {
 
 function redraw(opts, opt_cb) {
 
+  if (currentConvergence) {
+    // cancel
+    currentConvergence();
+    currentConvergence = null;
+  }
+
   var srcImg = opts.image;
   var dstCvs = opts.dstCvs;
   var palette = opts.palette;
@@ -102,7 +110,7 @@ function redraw(opts, opt_cb) {
   var outputImageData = dstCtx.createImageData(srcData);
 
   var convergeStart = window.performance.now();
-  converge(clusterData, async, progress, complete);
+  currentConvergence = converge(clusterData, async, progress, complete);
 
   function progress(clusterData, convergeCount, pixelsMoved) {
     console.log('converge', convergeCount, async == true ? 'ASYNC' : 'SYNC', pixelsMoved);
