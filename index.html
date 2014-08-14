@@ -8,10 +8,76 @@
 </head>
 <body>
 <div class="workspace">
+  <div class="input">
+    <img id="img-input">
+  </div>
   <div class="output">
     <canvas id="cvs-n-color-rgb"></canvas>
     <canvas id="cvs-n-color-gif"></canvas>
   </div>
+  <form class="pure-form pure-form-aligned">
+
+    <fieldset>
+      <label for="options-async" class="pure-checkbox">
+        <input
+          id="options-async"
+          type="checkbox"
+          checked> Asynchronously render
+      </label>
+    </fieldset>
+
+    <fieldset>
+
+      <legend>Palette</legend>
+
+      <div class="pure-control-group">
+        <label for="palette-gameboy" class="pure-radio"></label>
+        <input
+          type="radio"
+          name="options-palettes"
+          id="palette-gameboy"
+          value="gameboy" checked> Gameboy
+      </div>
+
+      <div class="pure-control-group">
+        <label for="palette-special-beam-cannon" class="pure-radio"></label>
+        <input
+          type="radio"
+          name="options-palettes"
+          id="palette-special-beam-cannon"
+          value="special-beam-cannon"> Special Beam Cannon (Raditz)
+      </div>
+
+      <div class="pure-control-group">
+        <label for="palette-special-beam-cannon-cell" class="pure-radio"></label>
+        <input
+          type="radio"
+          name="options-palettes"
+          id="palette-special-beam-cannon-cell"
+          value="special-beam-cannon-cell"> Special Beam Cannon (Cell)
+      </div>
+
+      <div class="pure-control-group">
+        <label for="palette-goku" class="pure-radio"></label>
+        <input
+          type="radio"
+          name="options-palettes"
+          id="palette-goku"
+          value="goku"> Super Saiyan Goku
+      </div>
+
+      <div class="pure-control-group">
+        <label for="palette-muted-kirby" class="pure-radio"></label>
+        <input
+          type="radio"
+          name="options-palettes"
+          id="palette-muted-kirby"
+          value="muted-kirby"> Muted Kirby
+      </div>
+
+    </fieldset>
+
+  </form>
 </div>
 <script type="text/javascript" src="bundle.js"></script>
 </body>
