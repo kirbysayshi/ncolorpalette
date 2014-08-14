@@ -1,6 +1,6 @@
 {
   "name": "ncolorpalette",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Static page for creating n-color palettized images/gifs",
   "main": "index.js",
   "scripts": {
