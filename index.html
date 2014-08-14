@@ -3,23 +3,18 @@
 <head>
   <meta charset="utf8">
   <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/pure/0.5.0/pure-min.css">
+  <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/pure/0.5.0/grids-responsive-min.css">
   <link rel="stylesheet" type="text/css" href="css/styles.css">
   <title>n-color palette</title>
 </head>
 <body>
-<div class="workspace">
-  <div class="input">
-    <img id="img-input">
-  </div>
-  <div class="output">
-    <canvas id="cvs-n-color-rgb"></canvas>
-    <img id="img-output">
-    <canvas id="cvs-n-color-gif"></canvas>
+<div class="workspace pure-g">
 
-  </div>
-  <form class="pure-form pure-form-aligned">
+  <form class="pure-form pure-form-aligned pure-u-1 pure-u-md-1-4">
 
-    <fieldset>
+    <h2>Options</h2>
+
+    <fieldset class="">
       <label for="options-async" class="pure-checkbox">
         <input
           id="options-async"
@@ -32,7 +27,7 @@
 
       <legend>Palette</legend>
 
-      <div class="pure-controls">
+      <div class="">
         <label for="palette-gameboy" class="pure-radio">
           <input
             type="radio"
@@ -78,7 +73,23 @@
     </fieldset>
 
   </form>
+
+  <div class="output pure-u-1 pure-u-md-3-4">
+
+    <h1>N-Color Palette</h1>
+    <p>Drag in an image to apply a new palette to it!<p>
+
+    <canvas id="cvs-n-color-rgb" class="pure-img"></canvas>
+    <img id="img-output" class="pure-img">
+    <canvas id="cvs-n-color-gif" class="pure-img"></canvas>
+  </div>
+
 </div>
+
+<div class="input">
+  <img id="img-input">
+</div>
+
 <script type="text/javascript" src="bundle.js"></script>
 </body>
 </html>

@@ -2,7 +2,11 @@ canvas {
   background-color: #CCCCCC;
 }
 
-.input {
+.workspace {
+  margin: 0 1em;
+}
+
+.input, #cvs-n-color-gif {
   display: none;
 }
 
