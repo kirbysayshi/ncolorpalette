@@ -22,6 +22,12 @@ function current() {
   }
 }
 
+function now() {
+  return window.performance
+    ? window.performance.now()
+    : Date.now();
+}
+
 document.addEventListener('dragenter', function(e) {
   document.body.classList.add('drag-valid');
   e.preventDefault();
@@ -109,7 +115,7 @@ function redraw(opts, opt_cb) {
   // Init output data.
   var outputImageData = dstCtx.createImageData(srcData);
 
-  var convergeStart = window.performance.now();
+  var convergeStart = now();
   currentConvergence = converge(clusterData, async, progress, complete);
 
   function progress(clusterData, convergeCount, pixelsMoved) {
@@ -120,7 +126,7 @@ function redraw(opts, opt_cb) {
 
   function complete(err, clusterData, convergeCount) {
 
-    var time = window.performance.now() - convergeStart;
+    var time = now() - convergeStart;
 
     document.querySelector('#output-stats').textContent =
       '(' + convergeCount + ' iterations, ' + time.toFixed(2) + 'ms)';
