@@ -1,3 +1,7 @@
+
+// Polyfill auto attached self to canvas proto if needed.
+require('./vendor/canvas-toBlob');
+
 var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
@@ -134,7 +138,15 @@ function redraw(opts, opt_cb) {
     console.log('converged in', convergeCount, time + 'ms');
     Clusterer.applyPaletteToImageData(clusterData, palette, outputImageData);
     dstCtx.putImageData(outputImageData, 0, 0);
-    dstImg.src = dstCvs.toDataURL();
+
+    dstCvs.toBlob(function(blob) {
+      var url = URL.createObjectURL(blob);
+      dstImg.addEventListener('load', function onload() {
+        URL.revokeObjectURL(url);
+        dstImg.removeEventListener('load', onload);
+      })
+      dstImg.src = url;
+    })
 
     // Hide canvas, show image to allow for dragging out of the browser.
     setTimeout(function() {
