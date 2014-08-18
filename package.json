@@ -7,8 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build-purecss": "cp node_modules/purecss/{pure-min.css,grids-responsive-min.css} vendor/",
     "build-gifjs": "cp node_modules/gif.js/dist/gif.worker* vendor/",
-    "dev": "npm run build-gifjs && npm run build-purecss && beefy index.js:bundle.js",
-    "deploy": "npm run build-gifjs && npm run build-purecss && browserify -e index.js > bundle.js"
+    "build-vendor": "npm run build-purecss && npm run build-gifjs",
+    "dev": "npm run build-vendor && beefy index.js:bundle.js",
+    "deploy": "npm run build-vendor && browserify -e index.js > bundle.js"
   },
   "repository": {
     "type": "git",
