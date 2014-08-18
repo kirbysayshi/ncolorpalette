@@ -553,7 +553,17 @@ exports.goku = {
   ]
 }
 
-  // http://www.colourlovers.com/palette/1652329/Muted_Kirby
+exports.kamehameha = {
+  name: "Kame Hame Ha",
+  pixels: [
+    0, 5, 39, 255, // deep dark blue
+    9, 62, 189, 255, // royal blue
+    22, 86, 178, 255, // shadow blue
+    235, 223, 240, 255 // white blue
+  ]
+}
+
+// http://www.colourlovers.com/palette/1652329/Muted_Kirby
 exports['muted-kirby'] = {
   name: 'Muted Kirby',
   pixels: [
