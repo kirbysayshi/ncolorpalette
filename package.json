@@ -28,5 +28,8 @@
   "homepage": "https://github.com/kirbysayshi/ncolorpalette",
   "devDependencies": {
     "browserify": "^5.9.1"
+  },
+  "dependencies": {
+    "vash": "^0.7.12-1"
   }
 }

@@ -13,3 +13,9 @@ canvas {
 .drag-valid {
   background-color: green;
 }
+
+.palette-swatch {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+}

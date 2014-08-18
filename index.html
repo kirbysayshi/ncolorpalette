@@ -32,46 +32,7 @@
 
       <legend>Palette</legend>
 
-      <div class="">
-        <label for="palette-gameboy" class="pure-radio">
-          <input
-            type="radio"
-            name="options-palettes"
-            id="palette-gameboy"
-            value="gameboy" checked> Gameboy
-        </label>
-
-        <label for="palette-special-beam-cannon" class="pure-radio">
-          <input
-            type="radio"
-            name="options-palettes"
-            id="palette-special-beam-cannon"
-            value="special-beam-cannon"> Special Beam Cannon (Raditz)
-        </label>
-
-        <label for="palette-special-beam-cannon-cell" class="pure-radio">
-          <input
-            type="radio"
-            name="options-palettes"
-            id="palette-special-beam-cannon-cell"
-            value="special-beam-cannon-cell"> Special Beam Cannon (Cell)
-        </label>
-
-        <label for="palette-goku" class="pure-radio">
-          <input
-            type="radio"
-            name="options-palettes"
-            id="palette-goku"
-            value="goku"> Super Saiyan Goku
-        </label>
-
-        <label for="palette-muted-kirby" class="pure-radio">
-          <input
-            type="radio"
-            name="options-palettes"
-            id="palette-muted-kirby"
-            value="muted-kirby"> Muted Kirby
-        </label>
+      <div id="palette-wrapper">
 
       </div>
 
@@ -97,6 +58,23 @@
 <div class="input">
   <img id="img-input">
 </div>
+
+<script type="text/vash" id="tpl-palette">
+  <label for="palette-@model.id" class="pure-radio">
+    <input
+      type="radio"
+      name="options-palettes"
+      id="palette-@model.id"
+      value="@model.id"
+      @(model.id == 'gameboy' ? 'checked' : '')> @model.name <br>
+      @for(var i = 0; i < model.pixels.length; i+=4) {
+        var r = model.pixels[i]
+          , g = model.pixels[i+1]
+          , b = model.pixels[i+2]
+        <span class="palette-swatch" style="background-color: rgb(@r, @g, @b);"></span>
+      }
+  </label>
+</script>
 
 <script type="text/javascript" src="bundle.js"></script>
 </body>
