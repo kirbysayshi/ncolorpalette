@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "beefy index.js:bundle.js",
-    "deploy": "browserify -e index.js > bundle.js"
+    "build-gifjs": "cp node_modules/gif.js/dist/gif.worker* vendor/",
+    "dev": "npm run build-gifjs && beefy index.js:bundle.js",
+    "deploy": "npm run build-gifjs && browserify -e index.js > bundle.js"
   },
   "repository": {
     "type": "git",
@@ -30,6 +31,7 @@
     "browserify": "^5.9.1"
   },
   "dependencies": {
+    "gif.js": "^0.1.6",
     "vash": "^0.7.12-1"
   }
 }

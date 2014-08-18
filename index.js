@@ -3,12 +3,14 @@
 require('./vendor/canvas-toBlob');
 
 var vash = require('vash');
+var GIF = require('gif.js').GIF;
 
 var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
 
 var currentConvergence = null;
+var currentGif = null;
 
 var templates = (function() {
   var nodes = document.querySelectorAll('script[type="text/vash"]');
@@ -32,13 +34,24 @@ function current() {
     // Defaults/Constants
     ASYNC_AREA_LIMIT: 120000,
 
+    GIF_QUANTIZATION_QUALITY: 10,
+
     // DOM Options
     palette: elPalette ? palettes[elPalette.value] : null,
+    async: q('#options-async').checked,
+    asGif: q('#options-as-gif').checked,
+    gifTwinkle: parseInt(q('#options-gif-twinkle-delay').value, 10),
+    gifFrame: parseInt(q('#options-gif-frame-delay').value, 10),
+
     paletteWrapper: q('#palette-wrapper'),
     image: q('#img-input'),
     dstCvs: q('#cvs-n-color-rgb'),
-    async: q('#options-async').checked,
-    dstImg: q('#img-output')
+    dstImg: q('#img-output'),
+    dstCvsGif: q('#cvs-n-color-gif'),
+    dstImgGif: q('#img-output-gif'),
+
+    loadingPng: q('#png-loading'),
+    loadingGif: q('#gif-loading')
   }
 }
 
@@ -123,6 +136,9 @@ function redraw(opts, opt_cb) {
     ? true
     : false;
 
+  // Show loading indicator.
+  opts.loadingPng.style.display = 'inline';
+
   // Make canvas visible to allow for animation.
   dstCvs.style.display = 'block';
   dstImg.style.display = 'none';
@@ -165,10 +181,15 @@ function redraw(opts, opt_cb) {
       var url = URL.createObjectURL(blob);
       dstImg.addEventListener('load', function onload() {
         URL.revokeObjectURL(url);
+        opts.loadingPng.style.display = 'none';
         dstImg.removeEventListener('load', onload);
       })
       dstImg.src = url;
     })
+
+    if (opts.asGif) {
+      doGIF();
+    }
 
     // Hide canvas, show image to allow for dragging out of the browser.
     setTimeout(function() {
@@ -178,4 +199,60 @@ function redraw(opts, opt_cb) {
       if (opt_cb) opt_cb.apply(null, arguments);
     })
   }
+
+  function doGIF() {
+    opts.loadingGif.style.display = 'inline';
+
+    var dstCvsGif = opts.dstCvsGif;
+    var dstCtxGif = dstCvsGif.getContext('2d');
+    var dstImgGif = opts.dstImgGif;
+    var outputGifImageData = dstCtx.createImageData(outputImageData);
+
+    dstCvsGif.width = outputGifImageData.width;
+    dstCvsGif.height = outputGifImageData.height;
+
+    if (currentGif) {
+      currentGif.abort();
+    }
+
+    currentGif = new GIF({
+      workers: palette.pixels.length / 4,
+      quality: opts.GIF_QUANTIZATION_QUALITY,
+      workerScript: 'vendor/gif.worker.js'
+    })
+
+    currentGif.on('finished', function(blob) {
+      console.log('gif finished called')
+      var url = URL.createObjectURL(blob);
+      dstImgGif.addEventListener('load', function onload() {
+        URL.revokeObjectURL(url);
+        opts.loadingGif.style.display = 'none';
+        dstImgGif.removeEventListener('load', onload);
+      })
+      dstImgGif.src = url;
+    })
+
+    var cycledPalette = palette.pixels;
+
+    for (var i = 0; i < palette.pixels.length / 4; i++) {
+      cycledPalette = applyThenCyclePalette(clusterData, cycledPalette, outputGifImageData);
+      dstCtxGif.putImageData(outputGifImageData, 0, 0);
+      currentGif.addFrame(dstCvsGif, {
+        copy: true,
+        delay: i == 0
+          ? opts.gifTwinkle
+          : opts.gifFrame
+      });
+    }
+
+    currentGif.render();
+  }
+}
+
+function applyThenCyclePalette(clusterData, prevPalette, outputImageData) {
+  var cycledPalette = prevPalette.slice(0);
+  Clusterer.applyPaletteToImageData(clusterData, cycledPalette, outputImageData);
+  var front = cycledPalette.splice(0, 4);
+  cycledPalette.push.apply(cycledPalette, front);
+  return cycledPalette;
 }

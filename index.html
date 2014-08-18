@@ -15,7 +15,7 @@
     <p>Drag in an image to apply a new palette to it!<p>
   </header>
 
-  <form class="pure-form pure-form-aligned pure-u-1 pure-u-md-1-4">
+  <form class="pure-form pure-form-stacked pure-form-aligned pure-u-1 pure-u-md-1-4" onsubmit="return false;">
 
     <h2>Options</h2>
 
@@ -29,11 +29,36 @@
     </fieldset>
 
     <fieldset>
+      <legend>GIF</legend>
+
+      <label for="options-as-gif" class="pure-checkbox">
+        <input
+          id="options-as-gif"
+          type="checkbox"> Also render GIF
+      </label>
+
+      <label for="options-gif-twinkle-delay" class="pure-checkbox">
+        GIF twinkle delay (ms)
+      </label>
+      <input
+        id="options-gif-twinkle-delay"
+        type="text" value="1000">
+
+      <label for="options-gif-frame-delay" class="pure-checkbox">
+        GIF frame delay (ms)
+      </label>
+      <input
+        id="options-gif-frame-delay"
+        type="text" value="50">
+
+    </fieldset>
+
+    <fieldset>
 
       <legend>Palette</legend>
 
       <div id="palette-wrapper">
-
+        <!-- supplied via template -->
       </div>
 
     </fieldset>
@@ -42,10 +67,15 @@
 
   <div class="output pure-u-1 pure-u-md-3-4">
 
+    <h3>PNG <span id="png-loading" class="loading" style="display: none;">WORKING...</span></h3>
     <canvas id="cvs-n-color-rgb" class="pure-img"></canvas>
     <img id="img-output" class="pure-img">
-    <canvas id="cvs-n-color-gif" class="pure-img"></canvas>
     <p><small id="output-stats">&nbsp;</small></p>
+
+    <h3>GIF <span id="gif-loading" class="loading" style="display: none;">WORKING...</span></h3>
+    <canvas id="cvs-n-color-gif" class="pure-img"></canvas>
+    <img id="img-output-gif" class="pure-img">
+
   </div>
 
   <footer class="pure-u-1">
