@@ -30,9 +30,11 @@
   },
   "homepage": "https://github.com/kirbysayshi/ncolorpalette",
   "devDependencies": {
+    "beefy": "^2.1.0",
     "browserify": "^5.9.1"
   },
   "dependencies": {
+    "exif-component": "^1.0.1",
     "gif.js": "^0.1.6",
     "purecss": "^0.5.0",
     "vash": "^0.7.12-1"

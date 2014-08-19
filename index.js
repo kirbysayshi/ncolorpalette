@@ -108,6 +108,50 @@ document.addEventListener('drop', function(e) {
   e.stopPropagation();
 }, false)
 
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+
+  if (!file) {
+    throw new Error('No file or invalid file was selected');
+  }
+
+  var exif = require('exif-component');
+  var exifRotate = require('./vendor/exif-rotate');
+
+  var reader = new FileReader();
+  reader.readAsArrayBuffer(file);
+  reader.addEventListener('loadend', function() {
+    var c = current();
+
+    var blob = new Blob([reader.result], {type: file.type});
+    var blobUrl = URL.createObjectURL(blob)
+    c.image.src = blobUrl;
+    c.image.addEventListener('load', function load(e) {
+      c.image.removeEventListener('load', load);
+      console.log('input display ready');
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+
+      try {
+        var orientationsToIndex = ['top-left', 'top-right', 'bottom-right', 'bottom-left', 'left-top', 'right-top', 'right-bottom', 'left-bottom'];
+        var tags = exif(reader.result);
+        var dataurl = exifRotate(c.image, orientationsToIndex.indexOf(tags.orientation));
+        c.image.src = dataurl;
+        c.image.addEventListener('load', function load(e) {
+          c.image.removeEventListener('load', load);
+          redraw(c);
+        })
+      } catch(e) {
+        // No exif data.
+        redraw(c);
+      }
+
+    })
+  })
+
+}, false)
+
 // Listen to options
 document.addEventListener('change', function(e) {
   var c = current();
