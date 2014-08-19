@@ -559,7 +559,9 @@ exports.kamehameha = {
     0, 5, 39, 255, // deep dark blue
     9, 62, 189, 255, // royal blue
     22, 86, 178, 255, // shadow blue
-    235, 223, 240, 255 // white blue
+    235, 223, 240, 255, // white blue
+    235, 223, 240, 255,
+    235, 223, 240, 255
   ]
 }
 
