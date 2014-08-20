@@ -97,7 +97,7 @@ function orient(img, n) {
   }
 
   ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL('image/jpeg');
+  return canvas;
 }
 
 /**

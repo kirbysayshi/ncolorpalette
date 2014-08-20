@@ -8,6 +8,7 @@ var GIF = require('gif.js').GIF;
 var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
+var fileToImage = require('./lib/fileToImage');
 
 var currentConvergence = null;
 var currentGif = null;
@@ -83,7 +84,7 @@ document.addEventListener('dragleave', function(e) {
 
 document.addEventListener('drop', function(e) {
   e.preventDefault();
-  console.log('drop', e);
+  e.stopPropagation();
   document.body.classList.remove('drag-valid');
 
   var files = e.dataTransfer.files;
@@ -92,62 +93,23 @@ document.addEventListener('drop', function(e) {
     throw new Error('No files or invalid file was dropped.');
   }
 
-  var reader = new FileReader();
-  reader.readAsDataURL(files[0]);
-  reader.addEventListener('loadend', function() {
-
-    var c = current();
-    c.image.src = reader.result;
-    c.image.addEventListener('load', function load(e) {
-      c.image.removeEventListener('load', load);
-      console.log('input display ready');
-      redraw(c);
-    })
+  var c = current();
+  fileToImage(files[0], c.image, function(err, img) {
+    redraw(c);
   })
-
-  e.stopPropagation();
 }, false)
 
 document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+  e.stopPropagation();
   var file = e.target.files[0];
 
   if (!file) {
     throw new Error('No file or invalid file was selected');
   }
 
-  var exif = require('exif-component');
-  var exifRotate = require('./vendor/exif-rotate');
-
-  var reader = new FileReader();
-  reader.readAsArrayBuffer(file);
-  reader.addEventListener('loadend', function() {
-    var c = current();
-
-    var blob = new Blob([reader.result], {type: file.type});
-    var blobUrl = URL.createObjectURL(blob)
-    c.image.src = blobUrl;
-    c.image.addEventListener('load', function load(e) {
-      c.image.removeEventListener('load', load);
-      console.log('input display ready');
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-
-      try {
-        var orientationsToIndex = ['top-left', 'top-right', 'bottom-right', 'bottom-left', 'left-top', 'right-top', 'right-bottom', 'left-bottom'];
-        var tags = exif(reader.result);
-        var dataurl = exifRotate(c.image, orientationsToIndex.indexOf(tags.orientation));
-        c.image.src = dataurl;
-        c.image.addEventListener('load', function load(e) {
-          c.image.removeEventListener('load', load);
-          redraw(c);
-        })
-      } catch(e) {
-        // No exif data.
-        redraw(c);
-      }
-
-    })
+  var c = current();
+  fileToImage(file, c.image, function(err, img) {
+    redraw(c);
   })
 
 }, false)
