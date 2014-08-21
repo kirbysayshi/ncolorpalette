@@ -8,7 +8,7 @@ var GIF = require('gif.js').GIF;
 var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
-var fileToImage = require('./lib/fileToImage');
+var fileToImage = require('./lib/fileToEXIFOrientedImage');
 
 var currentConvergence = null;
 var currentGif = null;
