@@ -183,15 +183,12 @@ function redraw(opts, opt_cb) {
     Clusterer.applyPaletteToImageData(clusterData, palette.pixels, outputImageData);
     dstCtx.putImageData(outputImageData, 0, 0);
 
-    dstCvs.toBlob(function(blob) {
-      var url = URL.createObjectURL(blob);
-      dstImg.addEventListener('load', function onload() {
-        URL.revokeObjectURL(url);
-        opts.loadingPng.style.display = 'none';
-        dstImg.removeEventListener('load', onload);
-      })
-      dstImg.src = url;
+    var url = dstCvs.toDataURL();
+    dstImg.addEventListener('load', function onload() {
+      opts.loadingPng.style.display = 'none';
+      dstImg.removeEventListener('load', onload);
     })
+    dstImg.src = url;
 
     if (opts.asGif) {
       doGIF();
@@ -231,7 +228,6 @@ function redraw(opts, opt_cb) {
       console.log('gif finished called')
       var url = URL.createObjectURL(blob);
       dstImgGif.addEventListener('load', function onload() {
-        URL.revokeObjectURL(url);
         opts.loadingGif.style.display = 'none';
         dstImgGif.removeEventListener('load', onload);
       })
