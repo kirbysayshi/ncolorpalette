@@ -9,7 +9,7 @@ var GIF = require('gif.js').GIF;
 var Clusterer = require('./lib/clusterer');
 var converge = require('./lib/converge');
 var palettes = require('./lib/palettes');
-var fileToImage = require('./lib/fileToImage');
+var fileToImage = require('./lib/fileToEXIFOrientedImage');
 
 var currentConvergence = null;
 var currentGif = null;
@@ -184,15 +184,12 @@ function redraw(opts, opt_cb) {
     Clusterer.applyPaletteToImageData(clusterData, palette.pixels, outputImageData);
     dstCtx.putImageData(outputImageData, 0, 0);
 
-    dstCvs.toBlob(function(blob) {
-      var url = URL.createObjectURL(blob);
-      dstImg.addEventListener('load', function onload() {
-        URL.revokeObjectURL(url);
-        opts.loadingPng.style.display = 'none';
-        dstImg.removeEventListener('load', onload);
-      })
-      dstImg.src = url;
+    var url = dstCvs.toDataURL();
+    dstImg.addEventListener('load', function onload() {
+      opts.loadingPng.style.display = 'none';
+      dstImg.removeEventListener('load', onload);
     })
+    dstImg.src = url;
 
     if (opts.asGif) {
       doGIF();
@@ -232,7 +229,6 @@ function redraw(opts, opt_cb) {
       console.log('gif finished called')
       var url = URL.createObjectURL(blob);
       dstImgGif.addEventListener('load', function onload() {
-        URL.revokeObjectURL(url);
         opts.loadingGif.style.display = 'none';
         dstImgGif.removeEventListener('load', onload);
       })
@@ -263,7 +259,8 @@ function applyThenCyclePalette(clusterData, prevPalette, outputImageData) {
   cycledPalette.push.apply(cycledPalette, front);
   return cycledPalette;
 }
-},{"./lib/clusterer":3,"./lib/converge":4,"./lib/fileToImage":5,"./lib/palettes":6,"./vendor/canvas-toBlob":14,"gif.js":12,"vash":13}],2:[function(require,module,exports){
+
+},{"./lib/clusterer":3,"./lib/converge":4,"./lib/fileToEXIFOrientedImage":5,"./lib/palettes":7,"./vendor/canvas-toBlob":15,"gif.js":13,"vash":14}],2:[function(require,module,exports){
 function AllocatedArray(maxLength, opt_type) {
   this._length = 0;
   this.data = new (opt_type || Uint32Array)(maxLength);
@@ -514,76 +511,156 @@ function syncConverge(clusterData, progress, cb) {
   }
 }
 },{"./clusterer":3}],5:[function(require,module,exports){
+var juggler = require('./imagejuggler');
 var exif = require('exif-component');
 var exifRotate = require('../vendor/exif-rotate');
 
-module.exports = function(file, img, cb) {
+var orientations = [
+  'top-left',
+  'top-right',
+  'bottom-right',
+  'bottom-left',
+  'left-top',
+  'right-top',
+  'right-bottom',
+  'left-bottom'
+];
 
-  // First load the file as an image.
-  img.onload = onload;
-  var url = URL.createObjectURL(file);
-  img.src = url;
+function extract(buf) {
+  try {
+    var tags = exif(buf);
+  } catch(e) {
+    return null;
+  }
 
-  function onload(e) {
-    URL.revokeObjectURL(url);
+  return tags;
+}
 
-    // If we have an orientation index, then rotate.
-    orientationIndex(file, function(err, index) {
-      if (err) return cb(null, img);
+module.exports = function(file, opt_img, cb) {
+  if (!cb) { cb = opt_img; opt_img = null; }
+  juggler.fileToArrayBuffer(file, function(err, ab) {
+    juggler.fileToImage(file, opt_img, function(err, img) {
 
-      rotate(img, index, function(err, img) {
-        return cb(err, img);
+      var tags = extract(ab);
+
+      // No exif data.
+      if (!tags) { return cb(null, img); }
+
+      var index = orientations.indexOf(tags.orientation);
+
+      // exif orientation not found, assume top-left (no change)
+      // for some reason they're off by one.
+      if (index == -1) { index += 2; }
+      else { index += 1; }
+
+      var cvs = exifRotate(img, index);
+      juggler.canvasToImage(cvs, img, function(err, img) {
+        cb(err, img);
       })
     })
-  }
-}
-
-// cb(err, loadedImg)
-function rotate(img, exifOrientationIndex, cb) {
-  if (exifOrientationIndex === -1) {
-    return cb(null, img);
-  }
-
-  var cvs = exifRotate(img, exifOrientationIndex);
-  cvs.toBlob(function(blob) {
-    var url = URL.createObjectURL(blob);
-
-    img.onload = function() {
-      URL.revokeObjectURL(url);
-      cb(null, img);
-    }
-
-    img.src = url;
   })
 }
+},{"../vendor/exif-rotate":16,"./imagejuggler":6,"exif-component":11}],6:[function(require,module,exports){
+function imageToCanvas(image, opt_cvs, cb) {
+  if (!cb) { cb = opt_cvs; opt_cvs = null; }
+  var cvs = opt_cvs || document.createElement('canvas');
+  var ctx = cvs.getContext('2d');
+  cvs.width = image.width;
+  cvs.height = image.height;
+  ctx.drawImage(image, 0, 0);
+  cb(null, cvs);
+}
 
-// cb(err, exifOrientationIndex)
-function orientationIndex(file, cb) {
-
-  var orientationsToIndex = [
-    'top-left',
-    'top-right',
-    'bottom-right',
-    'bottom-left',
-    'left-top',
-    'right-top',
-    'right-bottom',
-    'left-bottom'
-  ];
-
+function imageToArrayBuffer(image, cb) {
   var reader = new FileReader();
-  reader.readAsArrayBuffer(file);
-  reader.addEventListener('loadend', function() {
-    try {
-      var tags = exif(reader.result);
-      var index = orientationsToIndex.indexOf(tags.orientation);
-      return cb(null, index > -1 ? index + 1 : index);
-    } catch(e) {
-      return cb(e);
-    }
+  reader.onload = function() {
+    cb(reader.error, reader.result);
+  }
+  imageToCanvas(image, function(err, cvs) {
+    cvs.toBlob(reader.readAsArrayBuffer.bind(reader))
   })
 }
-},{"../vendor/exif-rotate":15,"exif-component":10}],6:[function(require,module,exports){
+
+function fileToArrayBuffer(file, cb) {
+  var reader = new FileReader();
+  reader.onload = function() {
+    cb(reader.error, reader.result);
+  }
+  reader.readAsArrayBuffer(file);
+}
+
+function imageDataToImage(imageData, opt_image, cb) {
+  if (!cb) { cb = opt_image; opt_image = null; }
+  var img = opt_image || document.createElement('img');
+  var cvs = document.createElement('canvas');
+  var ctx = cvs.getContext('2d');
+  cvs.width = imageData.width;
+  cvs.height = imageData.height;
+  ctx.putImageData(imageData, 0, 0);
+  canvasToImage(cvs, img, cb);
+}
+
+function fileToImage(file, opt_image, cb) {
+  if (!cb) { cb = opt_image; opt_image = null; }
+  var img = opt_image || document.createElement('img');
+  var url = URL.createObjectURL(file);
+  img.onload = function() {
+    URL.revokeObjectURL(url);
+    cb(null, img);
+  }
+  img.src = url;
+}
+
+function canvasToImage(canvas, opt_image, cb) {
+  if (!cb) { cb = opt_image; opt_image = null; }
+  var url;
+  var img = opt_image || document.createElement('img');
+  img.onload = function() {
+    URL.revokeObjectURL(url);
+    cb(null, img);
+  }
+  canvas.toBlob(function(blob) {
+    url = URL.createObjectURL(blob);
+    img.src = url;
+  });
+}
+
+function blobToImage(blob, opt_image, cb) {
+  if (!cb) { cb = opt_image; opt_image = null; }
+  var img = opt_image || document.createElement('img');
+  var url = URL.createObjectURL(blob);
+  img.onload = function() {
+    URL.revokeObjectURL(url);
+    cb(null, img);
+  }
+  img.src = url;
+}
+
+function pixelsToCanvas(pixels, opt_canvas, cb) {
+  if (!cb) { cb = opt_canvas; opt_canvas = null; }
+  var cvs = opt_canvas || document.createElement('canvas');
+  var width = pixels.width || cvs.width;
+  var height = pixels.height || cvs.height;
+  cvs.width = width;
+  cvs.height = height;
+  var ctx = cvs.getContext('2d');
+  var imgdata = ctx.createImageData(width, height);
+  for (var i = 0; i < pixels.length; i++) {
+    imgdata.data[i] = pixels[i];
+  }
+  ctx.putImageData(imgdata, 0, 0);
+  cb(null, cvs);
+}
+
+exports.imageToCanvas = imageToCanvas;
+exports.imageToArrayBuffer = imageToArrayBuffer;
+exports.imageDataToImage = imageDataToImage;
+exports.fileToArrayBuffer = fileToArrayBuffer;
+exports.fileToImage = fileToImage;
+exports.canvasToImage = canvasToImage;
+exports.blobToImage = blobToImage;
+
+},{}],7:[function(require,module,exports){
 
 exports.gameboy = {
   name: 'Gameboy',
@@ -592,6 +669,27 @@ exports.gameboy = {
     6, 103, 49, 255,
     123, 180, 0, 255,
     138, 196, 0, 255
+  ]
+}
+
+exports['brooklyn-js'] = {
+  name: 'Brooklyn JS',
+  pixels: [
+    34, 34, 34, 255, // black
+    34, 34, 34, 255, // black
+    247, 223, 30, 255, // yellow
+    255, 255, 255, 255
+  ]
+}
+
+exports['jsconf-eu'] = {
+  name: 'JSConf EU',
+  pixels: [
+    226, 0, 122, 255, // the pink
+    226, 0, 122, 255, // the pink
+    226, 0, 122, 255, // the pink
+    226, 0, 122, 255, // the pink
+    255, 255, 255, 255
   ]
 }
 
@@ -652,9 +750,10 @@ exports['muted-kirby'] = {
     255, 255, 255, 255*/
   ]
 }
-},{}],7:[function(require,module,exports){
 
 },{}],8:[function(require,module,exports){
+
+},{}],9:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -882,7 +981,7 @@ var substr = 'ab'.substr(-1) === 'b'
 ;
 
 }).call(this,require('_process'))
-},{"_process":9}],9:[function(require,module,exports){
+},{"_process":10}],10:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -947,7 +1046,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -992,7 +1091,7 @@ function spaces(str) {
   }).replace(/^\s+|\s+$/g, '');
 }
 
-},{"./js/ExifReader":11}],11:[function(require,module,exports){
+},{"./js/ExifReader":12}],12:[function(require,module,exports){
 // Generated by CoffeeScript 1.6.2
 /*
 # ExifReader 1.0.1
@@ -2332,12 +2431,12 @@ function spaces(str) {
 
 }).call(this);
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 (function(c){function a(b,d){if({}.hasOwnProperty.call(a.cache,b))return a.cache[b];var e=a.resolve(b);if(!e)throw new Error('Failed to resolve module '+b);var c={id:b,require:a,filename:b,exports:{},loaded:!1,parent:d,children:[]};d&&d.children.push(c);var f=b.slice(0,b.lastIndexOf('/')+1);return a.cache[b]=c.exports,e.call(c.exports,c,c.exports,f,b),c.loaded=!0,a.cache[b]=c.exports}a.modules={},a.cache={},a.resolve=function(b){return{}.hasOwnProperty.call(a.modules,b)?a.modules[b]:void 0},a.define=function(b,c){a.modules[b]=c};var b=function(a){return a='/',{title:'browser',version:'v0.10.26',browser:!0,env:{},argv:[],nextTick:c.setImmediate||function(a){setTimeout(a,0)},cwd:function(){return a},chdir:function(b){a=b}}}();a.define('/gif.coffee',function(d,m,l,k){function g(a,b){return{}.hasOwnProperty.call(a,b)}function j(d,b){for(var a=0,c=b.length;a<c;++a)if(a in b&&b[a]===d)return!0;return!1}function i(a,b){function d(){this.constructor=a}for(var c in b)g(b,c)&&(a[c]=b[c]);return d.prototype=b.prototype,a.prototype=new d,a.__super__=b.prototype,a}var h,c,f,b,e;f=a('events',d).EventEmitter,h=a('/browser.coffee',d),e=function(d){function a(d){var a,b;this.running=!1,this.options={},this.frames=[],this.freeWorkers=[],this.activeWorkers=[],this.setOptions(d);for(a in c)b=c[a],null!=this.options[a]?this.options[a]:this.options[a]=b}return i(a,d),c={workerScript:'gif.worker.js',workers:2,repeat:0,background:'#fff',quality:10,width:null,height:null,transparent:null},b={delay:500,copy:!1},a.prototype.setOption=function(a,b){return this.options[a]=b,null!=this._canvas&&(a==='width'||a==='height')?this._canvas[a]=b:void 0},a.prototype.setOptions=function(b){var a,c;return function(d){for(a in b){if(!g(b,a))continue;c=b[a],d.push(this.setOption(a,c))}return d}.call(this,[])},a.prototype.addFrame=function(a,d){var c,e;null==d&&(d={}),c={},c.transparent=this.options.transparent;for(e in b)c[e]=d[e]||b[e];if(null!=this.options.width||this.setOption('width',a.width),null!=this.options.height||this.setOption('height',a.height),'undefined'!==typeof ImageData&&null!=ImageData&&a instanceof ImageData)c.data=a.data;else if('undefined'!==typeof CanvasRenderingContext2D&&null!=CanvasRenderingContext2D&&a instanceof CanvasRenderingContext2D||'undefined'!==typeof WebGLRenderingContext&&null!=WebGLRenderingContext&&a instanceof WebGLRenderingContext)d.copy?c.data=this.getContextData(a):c.context=a;else if(null!=a.childNodes)d.copy?c.data=this.getImageData(a):c.image=a;else throw new Error('Invalid image');return this.frames.push(c)},a.prototype.render=function(){var d,a;if(this.running)throw new Error('Already running');if(!(null!=this.options.width&&null!=this.options.height))throw new Error('Width and height must be set prior to rendering');this.running=!0,this.nextFrame=0,this.finishedFrames=0,this.imageParts=function(c){for(var b=function(){var b;b=[];for(var a=0;0<=this.frames.length?a<this.frames.length:a>this.frames.length;0<=this.frames.length?++a:--a)b.push(a);return b}.apply(this,arguments),a=0,e=b.length;a<e;++a)d=b[a],c.push(null);return c}.call(this,[]),a=this.spawnWorkers();for(var c=function(){var c;c=[];for(var b=0;0<=a?b<a:b>a;0<=a?++b:--b)c.push(b);return c}.apply(this,arguments),b=0,e=c.length;b<e;++b)d=c[b],this.renderNextFrame();return this.emit('start'),this.emit('progress',0)},a.prototype.abort=function(){var a;while(!0){if(a=this.activeWorkers.shift(),!(null!=a))break;console.log('killing active worker'),a.terminate()}return this.running=!1,this.emit('abort')},a.prototype.spawnWorkers=function(){var a;return a=Math.min(this.options.workers,this.frames.length),function(){var c;c=[];for(var b=this.freeWorkers.length;this.freeWorkers.length<=a?b<a:b>a;this.freeWorkers.length<=a?++b:--b)c.push(b);return c}.apply(this,arguments).forEach(function(a){return function(c){var b;return console.log('spawning worker '+c),b=new Worker(a.options.workerScript),b.onmessage=function(a){return function(c){return a.activeWorkers.splice(a.activeWorkers.indexOf(b),1),a.freeWorkers.push(b),a.frameFinished(c.data)}}(a),a.freeWorkers.push(b)}}(this)),a},a.prototype.frameFinished=function(a){return console.log('frame '+a.index+' finished - '+this.activeWorkers.length+' active'),this.finishedFrames++,this.emit('progress',this.finishedFrames/this.frames.length),this.imageParts[a.index]=a,j(null,this.imageParts)?this.renderNextFrame():this.finishRendering()},a.prototype.finishRendering=function(){var e,a,k,m,b,d,h;b=0;for(var f=0,j=this.imageParts.length;f<j;++f)a=this.imageParts[f],b+=(a.data.length-1)*a.pageSize+a.cursor;b+=a.pageSize-a.cursor,console.log('rendering finished - filesize '+Math.round(b/1e3)+'kb'),e=new Uint8Array(b),d=0;for(var g=0,l=this.imageParts.length;g<l;++g){a=this.imageParts[g];for(var c=0,i=a.data.length;c<i;++c)h=a.data[c],k=c,e.set(h,d),k===a.data.length-1?d+=a.cursor:d+=a.pageSize}return m=new Blob([e],{type:'image/gif'}),this.emit('finished',m,e)},a.prototype.renderNextFrame=function(){var c,a,b;if(this.freeWorkers.length===0)throw new Error('No free workers');return this.nextFrame>=this.frames.length?void 0:(c=this.frames[this.nextFrame++],b=this.freeWorkers.shift(),a=this.getTask(c),console.log('starting frame '+(a.index+1)+' of '+this.frames.length),this.activeWorkers.push(b),b.postMessage(a))},a.prototype.getContextData=function(a){return a.getImageData(0,0,this.options.width,this.options.height).data},a.prototype.getImageData=function(b){var a;return null!=this._canvas||(this._canvas=document.createElement('canvas'),this._canvas.width=this.options.width,this._canvas.height=this.options.height),a=this._canvas.getContext('2d'),a.setFill=this.options.background,a.fillRect(0,0,this.options.width,this.options.height),a.drawImage(b,0,0),this.getContextData(a)},a.prototype.getTask=function(a){var c,b;if(c=this.frames.indexOf(a),b={index:c,last:c===this.frames.length-1,delay:a.delay,transparent:a.transparent,width:this.options.width,height:this.options.height,quality:this.options.quality,repeat:this.options.repeat,canTransfer:h.name==='chrome'},null!=a.data)b.data=a.data;else if(null!=a.context)b.data=this.getContextData(a.context);else if(null!=a.image)b.data=this.getImageData(a.image);else throw new Error('Invalid frame');return b},a}(f),d.exports=e}),a.define('/browser.coffee',function(f,g,h,i){var a,d,e,c,b;c=navigator.userAgent.toLowerCase(),e=navigator.platform.toLowerCase(),b=c.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/)||[null,'unknown',0],d=b[1]==='ie'&&document.documentMode,a={name:b[1]==='version'?b[3]:b[1],version:d||parseFloat(b[1]==='opera'&&b[4]?b[4]:b[2]),platform:{name:c.match(/ip(?:ad|od|hone)/)?'ios':(c.match(/(?:webos|android)/)||e.match(/mac|win|linux/)||['other'])[0]}},a[a.name]=!0,a[a.name+parseInt(a.version,10)]=!0,a.platform[a.platform.name]=!0,f.exports=a}),a.define('events',function(f,e,g,h){b.EventEmitter||(b.EventEmitter=function(){});var a=e.EventEmitter=b.EventEmitter,c=typeof Array.isArray==='function'?Array.isArray:function(a){return Object.prototype.toString.call(a)==='[object Array]'},d=10;a.prototype.setMaxListeners=function(a){this._events||(this._events={}),this._events.maxListeners=a},a.prototype.emit=function(f){if(f==='error'&&(!(this._events&&this._events.error)||c(this._events.error)&&!this._events.error.length))throw arguments[1]instanceof Error?arguments[1]:new Error("Uncaught, unspecified 'error' event.");if(!this._events)return!1;var a=this._events[f];if(!a)return!1;if(!(typeof a=='function'))if(c(a)){var b=Array.prototype.slice.call(arguments,1),e=a.slice();for(var d=0,g=e.length;d<g;d++)e[d].apply(this,b);return!0}else return!1;switch(arguments.length){case 1:a.call(this);break;case 2:a.call(this,arguments[1]);break;case 3:a.call(this,arguments[1],arguments[2]);break;default:var b=Array.prototype.slice.call(arguments,1);a.apply(this,b)}return!0},a.prototype.addListener=function(a,b){if('function'!==typeof b)throw new Error('addListener only takes instances of Function');if(this._events||(this._events={}),this.emit('newListener',a,b),!this._events[a])this._events[a]=b;else if(c(this._events[a])){if(!this._events[a].warned){var e;this._events.maxListeners!==undefined?e=this._events.maxListeners:e=d,e&&e>0&&this._events[a].length>e&&(this._events[a].warned=!0,console.error('(node) warning: possible EventEmitter memory leak detected. %d listeners added. Use emitter.setMaxListeners() to increase limit.',this._events[a].length),console.trace())}this._events[a].push(b)}else this._events[a]=[this._events[a],b];return this},a.prototype.on=a.prototype.addListener,a.prototype.once=function(b,c){var a=this;return a.on(b,function d(){a.removeListener(b,d),c.apply(this,arguments)}),this},a.prototype.removeListener=function(a,d){if('function'!==typeof d)throw new Error('removeListener only takes instances of Function');if(!(this._events&&this._events[a]))return this;var b=this._events[a];if(c(b)){var e=b.indexOf(d);if(e<0)return this;b.splice(e,1),b.length==0&&delete this._events[a]}else this._events[a]===d&&delete this._events[a];return this},a.prototype.removeAllListeners=function(a){return a&&this._events&&this._events[a]&&(this._events[a]=null),this},a.prototype.listeners=function(a){return this._events||(this._events={}),this._events[a]||(this._events[a]=[]),c(this._events[a])||(this._events[a]=[this._events[a]]),this._events[a]}}),c.GIF=a('/gif.coffee')}.call(this,this))
 //# sourceMappingURL=gif.js.map
 // gif.js 0.1.6 - https://github.com/jnordberg/gif.js
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 /**
  * Vash - JavaScript Template Parser, v0.7.12-1
  *
@@ -4633,7 +4732,7 @@ exports["vQuery"] = vQuery;
 exports.__express = exports.renderFile;
 	return exports;
 }({ "version": "0.7.12-1" }));
-},{"fs":7,"path":8}],14:[function(require,module,exports){
+},{"fs":8,"path":9}],15:[function(require,module,exports){
 /* canvas-toBlob.js
  * A canvas.toBlob() implementation.
  * 2013-12-27
@@ -4759,7 +4858,7 @@ if (HTMLCanvasElement && !canvas_proto.toBlob) {
 }
 }(typeof self !== "undefined" && self || typeof window !== "undefined" && window || this.content || this));
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 // Originally from https://www.npmjs.org/package/exif-rotate, but with
 // component dependencies manually inlined.
 
